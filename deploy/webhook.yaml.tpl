@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: WEBHOOK_SVC
-  namespace: WEBHOOK_NS 
+  namespace: WEBHOOK_NS
   labels:
     app: WEBHOOK_SVC
 spec:

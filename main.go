@@ -26,6 +26,8 @@ import (
 var machines map[string]map[string]int
 var owner_file = "/etc/node_owners/owner_file.yaml"
 
+const nowner = "nodeowner"
+
 func validateLabeling(ctx context.Context, obj metav1.Object) (bool, validatingwh.ValidatorResult, error) {
 	var res validatingwh.ValidatorResult
 	var reqobj corev1.Node
@@ -90,9 +92,24 @@ func validateLabeling(ctx context.Context, obj metav1.Object) (bool, validatingw
 		return true, res, nil
 	}
 
-	//If the machine is not owned by the user attempting to label it, we will reject the operation.
+	//If the machine is not owned by the user attempting to label it, we will reject the operation. We do this using three kinds of checks.
+	// 1. Make sure the mandatory label is not being deleted
+	// 2. Make sure that the machine is owned by the user
+	// 3. Make sure the current nodeowner is set to the user
+	if _, ok := reqobj.ObjectMeta.Labels[nowner]; !ok {
+		fmt.Printf("User %s is trying to remove mandatory label %s. Rejecting request", request.UserInfo.Username, nowner)
+		res.Valid = false
+		res.Message = fmt.Sprintf("User %s is trying to remove mandatory label %snode. Rejecting request", request.UserInfo.Username, nowner)
+		return false, res, err
+	}
 
 	if _, ok := machines[request.UserInfo.Username][reqobj.ObjectMeta.Name]; ok {
+		if reqobj.ObjectMeta.Labels[nowner] != request.UserInfo.Username {
+			fmt.Printf("Machine %s is owned by user %s, but currently assigned to someone else. Rejecting request", reqobj.ObjectMeta.Name, request.UserInfo.Username)
+			res.Valid = false
+			res.Message = fmt.Sprintf("Machine %s is owned by user %s, but currently assigned to someone else. Rejecting request", reqobj.ObjectMeta.Name, request.UserInfo.Username)
+			return false, res, err
+		}
 	} else {
 		fmt.Printf("Machine %s is not owned by user %s. Rejecting request", reqobj.ObjectMeta.Name, request.UserInfo.Username)
 		res.Valid = false
@@ -100,22 +117,13 @@ func validateLabeling(ctx context.Context, obj metav1.Object) (bool, validatingw
 		return false, res, err
 	}
 
-	// Validate the labels
-	// We will make sure the default label of that user is not getting removed.
-	// For eg: 'ive' user cannot remove 'ivenode' from the machine they own. They
-	// also cannot create any labels that are not starting with their username.
-	// We also iterate through the keys and not the values since
-	// request.ObjectMeta.Labels is a map struct of strings.
-
-	if _, ok := reqobj.ObjectMeta.Labels[request.UserInfo.Username+"node"]; !ok {
-		fmt.Printf("User %s is trying to remove mandatory label %snode. Rejecting request", request.UserInfo.Username, request.UserInfo.Username)
-		res.Valid = false
-		res.Message = fmt.Sprintf("User %s is trying to remove mandatory label %snode. Rejecting request", request.UserInfo.Username, request.UserInfo.Username)
-		return false, res, err
-	}
+	// Iterate through the labels to make sure that the labels the user is trying
+	// to work through has the username as prefix. For eg: all machines owned by
+	// user 'xyz' have their labels prefixed with 'xyz'.
+	//Exceptions: *kubernetes.io*, nodeowner
 
 	for lbl := range reqobj.ObjectMeta.Labels {
-		if strings.Contains(lbl, "kubernetes.io") {
+		if strings.Contains(lbl, "kubernetes.io") || strings.Contains(lbl, nowner) {
 			continue
 		}
 

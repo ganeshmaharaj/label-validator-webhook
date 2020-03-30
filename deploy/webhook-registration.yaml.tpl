@@ -11,7 +11,7 @@ webhooks:
     clientConfig:
       service:
         name: WEBHOOK_SVC
-        namespace: WEBHOOK_NS 
+        namespace: WEBHOOK_NS
       caBundle: CA_BUNDLE
     rules:
       - operations: [ "UPDATE" ]
