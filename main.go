@@ -123,7 +123,7 @@ func validateLabeling(ctx context.Context, obj metav1.Object) (bool, validatingw
 	//Exceptions: *kubernetes.io*, nodeowner
 
 	for lbl := range reqobj.ObjectMeta.Labels {
-		if strings.Contains(lbl, "kubernetes.io") || strings.Contains(lbl, nowner) {
+		if strings.Contains(lbl, ".io") || strings.Contains(lbl, nowner) {
 			continue
 		}
 
