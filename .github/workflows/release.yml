@@ -1,4 +1,4 @@
-name: CI build for label webhook validator
+name: Release build
 on:
   push:
     tags:
