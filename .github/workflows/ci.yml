@@ -1,0 +1,17 @@
+name: CI build for label webhook validator
+on:
+  pull_request:
+  push:
+    branches: master
+
+jobs:
+  build:
+    name: Build webhook
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: "0"
+      - name: Build content
+        run: |
+          make
