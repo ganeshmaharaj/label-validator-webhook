@@ -14,5 +14,6 @@ jobs:
           fetch-depth: "0"
       - name: Build content
         run: |
+          docker login --username ${{ secrets.DOCKER_USERNAME }} --password ${{ secrets.DOCKER_TOKEN }}
           make
           make push
