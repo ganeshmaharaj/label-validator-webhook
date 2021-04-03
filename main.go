@@ -27,6 +27,7 @@ var machines map[string]map[string]int
 var owner_file = "/etc/node_owners/owner_file.yaml"
 
 const nowner = "nodeowner"
+const workloadcontroller = "pipeline"
 
 func validateLabeling(ctx context.Context, obj metav1.Object) (bool, validatingwh.ValidatorResult, error) {
 	var res validatingwh.ValidatorResult
@@ -125,6 +126,14 @@ func validateLabeling(ctx context.Context, obj metav1.Object) (bool, validatingw
 	for lbl := range reqobj.ObjectMeta.Labels {
 		if strings.Contains(lbl, ".io") || strings.Contains(lbl, nowner) {
 			continue
+		}
+
+		if lbl == workloadcontroller {
+			if !strings.HasPrefix(reqobj.ObjectMeta.Labels[lbl], request.UserInfo.Username) {
+				res.Valid = false
+				res.Message = fmt.Sprintf("value of label 'pipeline' should begin with %s", request.UserInfo.Username)
+				return false, res, nil
+			}
 		}
 
 		if !strings.HasPrefix(lbl, request.UserInfo.Username) {
